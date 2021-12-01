@@ -45,7 +45,8 @@ interpolate_track <- function(spdf,datefield,id,t,fun=c('linear','pchip','spline
   require(dplyr)
   
   sf = is(spdf,'sf'); if(sf) spdf = as(spdf,'Spatial')
-  fun = 
+  fun = match.arg(fun)
+  geom = match.arg(geom)
   
   if(!is(spdf[[datefield]],"POSIXt")) stop ("datefield must be an object of class POSIX")
   hasdata<-ifelse(is.null(data.cols),F,T)

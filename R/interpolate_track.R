@@ -44,6 +44,7 @@ interpolate_track <- function(spdf,datefield,id,t,fun=c('linear','pchip','spline
   require(sf)
   require(dplyr)
   
+  if(!(is(spdf,'sf') | is(spdf,'SpatialPoints')) stop ("spdf must be an object of class 'sf' or 'SpatialPoints'")
   sf = is(spdf,'sf'); if(sf) spdf = as(spdf,'Spatial')
   fun = match.arg(fun)
   geom = match.arg(geom)
@@ -54,6 +55,9 @@ interpolate_track <- function(spdf,datefield,id,t,fun=c('linear','pchip','spline
   
   spdf[[id]] <- factor(spdf[[id]])
   tracklist<-split(spdf,spdf[[id]])
+  singles = sapply(tracklist,nrow)==1
+  if(any(singles)) message("Some ids have only a single point associated with them and will be removed")
+  tracklist = tracklist[!singles]
   
   output = lapply(tracklist,FUN = function(track) {
     

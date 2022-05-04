@@ -31,7 +31,7 @@ make_argos_errors = function(object,LC = 'Quality',LC.values = NULL ,error.radiu
                              minor.axis = 'Error.Semi.Minor.Axis' ,major.axis = 'Error.Semi.Major.Axis',
                              orientation = 'Error.Ellipse.Orientation'){
   
-  if(!is(object,data.frame)) stop("object must be a dataframe")
+  if(!is(object,'data.frame')) stop("object must be a dataframe")
   
   object = ungroup(object)  
   

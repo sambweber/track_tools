@@ -37,10 +37,10 @@ make_argos_errors = function(object,LC = 'Quality',LC.values = NULL ,error.radiu
   
   # fill in missing isotropic errors with named values....
   
-  LC = factor(LC)
+ object[[LC]] = factor(object[[LC]])
   
   if(!missing(LC.values)){
-    if(is.null(names,LC.values))  stop("LC.values must be a named vector")
+    if(is.null(names(LC.values)))  stop("LC.values must be a named vector")
     object[[error.radius]] = ifelse(is.na(object[[error.radius]]),LC.values[as.character(object[[LC]])],object[[error.radius]])
   }
   

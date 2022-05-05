@@ -24,17 +24,16 @@ cbind(obj,
 }
 
 
-# ----------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------
 # crw_effSamp
-# ----------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------
 
-#' A convenience function to extract the effective sample size (i.e. approximate number of independent samples)
+#' Convenience functions to extract the effective sample size (i.e. approximate number of independent samples)
 #' from a posterior simulation object created by \code{crawl::crwSimulator}
 
-#' @return The original dataframe with new columns ln.sd.x and ln.sd.y which are log(err/sqrt(2)), where err is
-#' Argos errors in metres, along with the covariances between them.
+#' @return 
 
-# -------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------
 
 crw_effSamp <- function(object){
   if(!is(object,'crwSimulator')) stop ("object must be of class crwSimulator")
@@ -56,5 +55,31 @@ crw_check_ISW <- function(object,plot=T){
 }
 
 
+# --------------------------------------------------------------------------------------------------------------
+# get_sim_track
+# --------------------------------------------------------------------------------------------------------------
 
+#' Draws from a posterior simulation object created using \code{crawl::crwSimulator} and formats 
+#' simulated tracks into a \code{sf} object.
 
+#' @return 
+
+# -------------------------------------------------------------------------------------------------------------
+get_sim_track = function(obj,iter,fullPost=F) {
+
+lapply(1:iter,function(i){
+    j = 0
+    while(j <= 10){
+      sim = try(crwPostIS(obj,fullPost = T))
+      if(class(sim)[1] == "try-error") j = j+1 else break
+    }
+  
+    sim$alpha.sim[sim$locType=='p',c(1,3)] %>% as.data.frame() %>%
+    mutate(iter = i,datetime = sim$TimeNum[sim$locType=='p']*3600,
+           datetime = as.POSIXct(datetime,origin = '1970-01-01',tz='GMT')) 
+  }) %>% 
+    
+  do.call(rbind,.) %>%
+  st_as_sf(coords=c('mu.x','mu.y'),crs = attr(obj,'proj4'))
+      
+ }

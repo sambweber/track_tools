@@ -22,3 +22,39 @@ cbind(obj,
       )
 
 }
+
+
+# ----------------------------------------------------------------------------------------------------
+# crw_effSamp
+# ----------------------------------------------------------------------------------------------------
+
+#' A convenience function to extract the effective sample size (i.e. approximate number of independent samples)
+#' from a posterior simulation object created by \code{crawl::crwSimulator}
+
+#' @return The original dataframe with new columns ln.sd.x and ln.sd.y which are log(err/sqrt(2)), where err is
+#' Argos errors in metres, along with the covariances between them.
+
+# -------------------------------------------------------------------------------------------------------
+
+crw_effSamp <- function(object){
+  if(!is(object,'crwSimulator')) stop ("object must be of class crwSimulator")
+  attr(object$thetaSampList[[1]],'effSamp')
+}
+
+crw_check_ISW <- function(object,plot=T){
+  if(!is(object,'crwSimulator')) stop ("object must be of class crwSimulator")
+  
+  w = simObj$thetaSampList[[1]]
+  d = density(w[,1]*nrow(w),na.rm=T,n=1000)
+  dmax = d$x[which.max(d$y)]
+      
+  if(plot){
+    plot(d, xlab='Weight',main='Importance Sampling Weights', sub='(Weights centered on 1 is desirable)')
+    polygon(d,col = 'grey80')  
+  } else return(dmax)
+      
+}
+
+
+
+

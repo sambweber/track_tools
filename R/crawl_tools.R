@@ -43,7 +43,7 @@ crw_effSamp <- function(object){
 crw_check_ISW <- function(object,plot=T){
   if(!is(object,'crwSimulator')) stop ("object must be of class crwSimulator")
   
-  w = simObj$thetaSampList[[1]]
+  w = object$thetaSampList[[1]]
   d = density(w[,1]*nrow(w),na.rm=T,n=1000)
   dmax = d$x[which.max(d$y)]
       

@@ -61,7 +61,9 @@ crw_check_ISW <- function(object,plot=T){
 
 #' Draws from a posterior simulation object created using \code{crawl::crwSimulator} and formats 
 #' simulated tracks into a \code{sf} object.
-
+#'
+#' @param 
+#'
 #' @return 
 
 # -------------------------------------------------------------------------------------------------------------
@@ -83,3 +85,78 @@ lapply(1:iter,function(i){
   st_as_sf(coords=c('mu.x','mu.y'),crs = attr(obj,'proj4'))
       
  }
+
+
+
+
+# --------------------------------------------------------------------------------------------------------------
+# as_crwData
+# --------------------------------------------------------------------------------------------------------------
+
+#' Constructor function for converting lists of \code{crwFit} and \code{crwPredict} objects for multiple individuals
+#' into a \code{momentuHMM::crwData} object for multiple imputation. This is for use with nested tibbles containing
+#' list columns with crawl model outputs for multiple individuals and generates the same output as the \code{momentuHMM::crwWrap} function
+#'
+#' @param ID,crwFit,crwPredict The names of the columns in \code{data} containing the individual track IDs and the lists of crwFit and crwPredict objects
+#'
+#' @return A formatted crwData object for passing to other \code{momentuHMM} functions
+
+# -------------------------------------------------------------------------------------------------------------
+
+as_crwData = function(data,ID,crwFit,crwPredict) {
+ 
+ if(!all(c(ID,crwFit,crwPredict) %in% names(data))) stop ("Column names provided do not exist in data")
+ if(!all(map_lgl(data[[crwPredict]],is,'crwPredict'))) stop ("All crwPredict objects should be of class 'crwPredict'")
+ if(!all(map_lgl(data[[crwFit]],is,'crwFit'))) stop ("All crwFit objects should be of class 'crwFit'")
+ 
+ tcol = unique(map_chr(test$crwFit,~.x$Time.name))
+ if(length(tcol)>1) stop("Time.name is not the same for all crwFit objects")
+ 
+ data[[crwPredict]] <- map2(data[[ID]],data[[crwPredict]],~mutate(data.frame(.y),ID = as.character(.x)))
+     
+ crw =
+  list(
+    crwFits = setNames(data[[crwFit]],data[[ID]]),
+    crwPredict = bind_rows(data[[crwPredict]])
+  )     
+      
+ class(crw) <- append('crwData',class(crw))
+ attributes(crw$crwPredict)$Time.name <- tcol 
+ crw                                  
+     
+}
+      
+      
+# --------------------------------------------------------------------------------------------------------------
+# hmm_inits
+# --------------------------------------------------------------------------------------------------------------
+
+#' Uses k-means clustering to generate appropriate starting values for the state-dependent probability distribution parameters of each data stream
+#' in hidden Markov models. Currently only works for step length and turning angle, but I plan to extend it to hanlde additional data streams. 
+#'
+#' @param n.states The number of latent states to initialize
+#'
+#' @param step,angle The names of columns containing the step lengths and turning angles. By default these are set to the 
+#' column names output by \code{momentuHMM::prepData}
+#'
+#' @return A named list containing the means and standard deviations of step length and turning angle for each state which can be passed straight to
+#' the \code{Par0} argument in \code{momentuHMM::fitHMM}
+#
+#' This function needs enhancing to handle additional data streams (e.g. altitude)
+
+# -------------------------------------------------------------------------------------------------------------
+
+hmm_inits = function(data,nstates,step = 'step',angle = 'angle'){
+      
+  k         <- na.omit(dplyr::select(data,step,angle)) 
+  k1        <- mutate(k,angle=abs(angle))
+  clus      <- kmeans(k1,nstates)
+  stp_init  <- clus$centers[,1]
+  stp_sd    <- aggregate(k[,1]~fitted(clus,method="classes"),FUN='sd')[,2]
+  stepPar0  <- c(stp_init,stp_sd)
+  anglePar0 <- aggregate(k[,2]~fitted(clus,method="classes"),FUN=CircStats::est.kappa)[,2]
+  list(step = stepPar0, angle = anglePar0) 
+      
+}
+
+

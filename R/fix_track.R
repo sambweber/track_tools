@@ -10,13 +10,15 @@
 
 # -------------------------------------------------------------------------------------------------------
 
-adjust_duplicate_times <- function (dt,eps=10) {
+adjust_duplicate_times <- function (dt,drop=F,eps=10) {
   dups <- duplicated(dt)
+  if(drop) return(dt[!dups]) else {
   if (any(dups)) {
     dt[dups] <- dt[dups] + eps
     dt <- Recall(dt)
   }
-  dt
+  retun(dt)
+  }
 }
 
 # ----------------------------------------------------------------------------------------------------

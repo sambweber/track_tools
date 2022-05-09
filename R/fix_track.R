@@ -10,15 +10,13 @@
 
 # -------------------------------------------------------------------------------------------------------
 
-adjust_duplicate_times <- function (dt,drop=F,eps=10) {
+adjust_duplicate_times <- function (dt,eps=10) {
   dups <- duplicated(dt)
-  if(drop) return(dt[!dups]) else {
   if (any(dups)) {
     dt[dups] <- dt[dups] + eps
     dt <- Recall(dt)
   }
   retun(dt)
-  }
 }
 
 # ----------------------------------------------------------------------------------------------------
@@ -35,7 +33,7 @@ adjust_duplicate_times <- function (dt,drop=F,eps=10) {
 
 # -------------------------------------------------------------------------------------------------------
 
-fix_track = function (x, dt = 'datetime', drop.duplicates = F, eps = 10){
+fix_track = function (x, dt = 'datetime', drop.duplicate.times = F, eps = 10){
   
   dt = as.name(dt)
   if(is(x,'Spatial')) x = st_as_sf(x)   
@@ -43,7 +41,8 @@ fix_track = function (x, dt = 'datetime', drop.duplicates = F, eps = 10){
   x %>%
     mutate(!!dt := round(!!dt,'secs')) %>%    # deal with fractional seconds from some tags (e.g. FastGPS)
     dplyr::distinct(.keep_all=TRUE) %>%       # remove duplicate rows
-    mutate(!!dt := adjust_duplicate_times(!!dt,drop = drop.duplicates, eps=eps)) %>% # adjust duplicated time stamps
+    {if(drop.duplicate.times) subset(.,!duplicated(!!dt)) else .} %>%
+    mutate(!!dt := adjust_duplicate_times(!!dt, eps=eps)) %>% # adjust duplicated time stamps
     arrange(!!dt,.by_group=T)              # order by datetime
   
 }

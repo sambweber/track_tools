@@ -16,7 +16,7 @@ adjust_duplicate_times <- function (dt,eps=10) {
     dt[dups] <- dt[dups] + eps
     dt <- Recall(dt)
   }
-  retun(dt)
+  return(dt)
 }
 
 # ----------------------------------------------------------------------------------------------------

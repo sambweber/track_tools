@@ -41,7 +41,7 @@ fix_track = function (x, dt = 'datetime', drop.duplicate.times = F, eps = 10){
   x %>%
     mutate(!!dt := round(!!dt,'secs')) %>%    # deal with fractional seconds from some tags (e.g. FastGPS)
     dplyr::distinct(.keep_all=TRUE) %>%       # remove duplicate rows
-    {if(drop.duplicate.times) subset(.,!duplicated(!!dt)) else .} %>%
+    {if(drop.duplicate.times) dplyr::filter(.,!duplicated(!!dt)) else .} %>%
     mutate(!!dt := adjust_duplicate_times(!!dt, eps=eps)) %>% # adjust duplicated time stamps
     arrange(!!dt,.by_group=T)              # order by datetime
   

@@ -46,4 +46,36 @@ fix_track = function (x, dt = 'datetime', drop.duplicate.times = F, eps = 10){
     arrange(!!dt,.by_group=T)              # order by datetime
   
 }
+  
+  
+# ----------------------------------------------------------------------------------------------------
+# best_location
+# ----------------------------------------------------------------------------------------------------
 
+#' Filters tracking dataset to retain only the best location within a burst of locations that are closely spaced in time.
+#' Having lots of locations that are very closely spaced in time (< 2 seconds) can lead to problems with model fitting that
+#' can't be solved by simply adding a fixed amount to duplicated timestamps. 
+
+#' @param data
+#' @param dt The name of the column containing the timestamp (must be of class \code{POSIX*}) 
+
+#' @return 
+
+# -------------------------------------------------------------------------------------------------------
+
+best_location = function(data,dt,tmin=1,filter_cols){
+  
+    min_na = function(x) {if(all(is.na(x))) is.na(x) else x == min(x,na.rm=T)}
+  
+    mutate(data,across(where(is.factor),as.numeric)) %>%
+    mutate(ok = traipse::track_time(!!as.name(dt)) > tmin) %>%
+    mutate(ok = replace_na(ok,TRUE))   %>%
+    mutate(ok = cumsum(ok))  %>%
+    group_by(ok) %>% 
+    dplyr::filter(across(all_of(filter_cols),min_na))
+  
+}
+  
+  
+  
+  

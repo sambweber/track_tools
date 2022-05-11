@@ -77,10 +77,11 @@ best_location = function(data,dt,tmin=1,filter_cols){
 }
  
 # ----------------------------------------------------------------------------------------------------
-# spread_locations
+# spread_times
 # ----------------------------------------------------------------------------------------------------
 
-#' 
+#' Function for adjusting closely spaced times so that they are separated by a user-specified minimum
+#' interval. This is an extension of adjust_duplicate_times.
 
 #' @param data
 #' @param dt The name of the column containing the timestamp (must be of class \code{POSIX*}) 
@@ -89,7 +90,7 @@ best_location = function(data,dt,tmin=1,filter_cols){
 
 # -------------------------------------------------------------------------------------------------------  
   
-spread_locations = function(data,dt,tmin = 1){
+spread_times = function(data,dt,tmin = 1){
 
 data = mutate(data,t = traipse::track_time(!!as.name(dt)))
 

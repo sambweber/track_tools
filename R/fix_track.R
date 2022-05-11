@@ -65,16 +65,23 @@ fix_track = function (x, dt = 'datetime', eps = 1){
 
 best_location = function(data,dt,tmin=1,filter_cols){
      
-    if(!all(filter_cols %in% names(data))) stop ('named filter_cols do not all appear in data')
+    if(!all(filter_cols %in% names(data))) stop ('filter_cols do not all appear in data')
+    if(!all(map_lgl(filter_cols,~is.numeric(data[[.x]])|is.factor(data[[.x]])))) {
+      stop('filter_cols must be of class numeric or class factor')
+    }
+    
+    filter_cols <- ifelse(map_lgl(filter_cols,~is.factor(data[[.x]])),paste0(filter_cols,'..num'),filter_cols)
+  
     min_na = function(x) {if(all(is.na(x))) is.na(x) else x == min(x,na.rm=T)}
   
-    mutate(data,across(where(is.factor),as.numeric)) %>%
+    mutate(data,across(where(is.factor),as.numeric,.names="{.col}..num"))) %>%
     mutate(ok = traipse::track_time(!!as.name(dt)) >= tmin) %>%
     mutate(ok = replace_na(ok,TRUE))   %>%
     mutate(ok = cumsum(ok))  %>%
     group_by(ok,.add=T) %>% 
     dplyr::filter(across(all_of(filter_cols),min_na)) %>%
-    slice(1) %>% ungroup(ok)
+    slice(1) %>% ungroup(ok) %>%
+    dplyr::select(-ok,-ends_with('..num'))
   
 }
  

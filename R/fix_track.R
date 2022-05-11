@@ -72,9 +72,9 @@ best_location = function(data,dt,tmin=1,filter_cols){
     mutate(ok = traipse::track_time(!!as.name(dt)) >= tmin) %>%
     mutate(ok = replace_na(ok,TRUE))   %>%
     mutate(ok = cumsum(ok))  %>%
-    group_by(ok) %>% 
+    group_by(ok,.add=T) %>% 
     dplyr::filter(across(all_of(filter_cols),min_na)) %>%
-    slice(1) %>% ungroup()
+    slice(1) %>% ungroup(ok)
   
 }
  

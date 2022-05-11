@@ -74,7 +74,7 @@ best_location = function(data,dt,tmin=1,filter_cols){
   
     min_na = function(x) {if(all(is.na(x))) is.na(x) else x == min(x,na.rm=T)}
   
-    mutate(data,across(where(is.factor),as.numeric,.names="{.col}..num"))) %>%
+    mutate(data,across(where(is.factor),as.numeric,.names="{.col}..num")) %>%
     mutate(ok = traipse::track_time(!!as.name(dt)) >= tmin) %>%
     mutate(ok = replace_na(ok,TRUE))   %>%
     mutate(ok = cumsum(ok))  %>%

@@ -75,7 +75,42 @@ best_location = function(data,dt,tmin=1,filter_cols){
     dplyr::filter(across(all_of(filter_cols),min_na))
   
 }
+ 
+# ----------------------------------------------------------------------------------------------------
+# spread_locations
+# ----------------------------------------------------------------------------------------------------
+
+#' 
+
+#' @param data
+#' @param dt The name of the column containing the timestamp (must be of class \code{POSIX*}) 
+
+#' @return 
+
+# -------------------------------------------------------------------------------------------------------  
   
+spread_locations = function(data,dt,tmin = 1){
+
+data = mutate(data,t = traipse::track_time(!!as.name(dt)))
+
+i = 2
+
+while(i < nrow(data)){
   
+  if(data$t[i] >= tmin) {i=i+1;next} else {
+    
+    w = i:nrow(data)
+    x = cumsum(data$t[w])
+    s = seq_along(x)*tmin
+    data[[dt]][w] <- data[[dt]][w] + pmax((s-x),0)
+    i = i + sum(x<s)
+    
+  }
+}
+
+data$t <- NULL  
+return(data)  
+
+}
   
   

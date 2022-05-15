@@ -1,10 +1,23 @@
-#' ------------------------------------------------------------------------------------------------------------------
-#' cut_track
-#' ------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------
+# cut_track
+# ------------------------------------------------------------------------------------------------------------------
+
+#' Cuts a movement track into segments based on either a maximum allowable time step (tmax) between successive 
+#' fixes or user specified cutting dates.
+
+#' @param datetime A datetime vector of class \code{POSIXt*} containing the timestamps for each location.
+#' @param tmax The maximum allowable time step between locations. Tracks will be cut at gaps > tmax.
+#' @param cut.dates A vector of user defined datetimes at which tracks should be split. Must either be of class \code{POSIXt*} 
+#' or coercible to \code{POSIXt*}
+#' @param overlap A logical indicating whether track segments split by cut.dates should be overlapped by one location at the 
+#' start and ends. This can be useful to ensure continuous predictions from state space models with no gaps.
+#' 
+#' @return The original data object with a new 'segment' column added containing the segment ids. 
+
+# -------------------------------------------------------------------------------------------------------
 
 
-
-cut_track = function(data,datetime,tmax = NULL,cut.dates = NULL,overlap=F){
+cut_track = function(data,datetime,tmax = NULL,cut.dates = NULL,overlap=FALSE){
   
   if (!is(data[[datetime]],"POSIXt")) stop("'datetime' should be of class POSIXt")
   

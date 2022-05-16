@@ -70,11 +70,13 @@ make_argos_errors = function(object,LC = 'Quality',LC.values = NULL ,error.radiu
 #' number of satellites used. Values digitised from figure 1 of Dujon et al. 2014
 #' <https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.12286>
 #'
+#' @param .names Optional to specify the column names in the output dataframe
+#'
 #' @return A dataframe of error radii
 
 # -------------------------------------------------------------------------------------------------------
 
-fastGPS_errors <- function(){
+fastGPS_errors <- function(.names = c('nsats','err')){
 
 c(
   '11' = 16.5,
@@ -85,7 +87,7 @@ c(
   '6'  = 40.0,
   '5'  = 75.0,
   '4'  = 200.0
-) %>% enframe('nsats','err')
+) %>% enframe(.names[1],.names[2])
   
 }
 

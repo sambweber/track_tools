@@ -85,7 +85,7 @@ tibble(nsats = 4:11, err = case_when(
   nsats == 6  ~ 40.0,
   nsats == 5  ~ 75.0,
   nsats == 4  ~ 200.0
-)
+))
 }
 
 

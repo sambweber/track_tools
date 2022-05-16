@@ -76,16 +76,17 @@ make_argos_errors = function(object,LC = 'Quality',LC.values = NULL ,error.radiu
 
 fastGPS_errors <- function(){
 
-tibble(nsats = 4:11, err = case_when(
-  nsats == 11 ~ 16.5,
-  nsats == 10 ~ 16.5,
-  nsats == 9  ~ 19.1,
-  nsats == 8  ~ 23.3,
-  nsats == 7  ~ 28.4,
-  nsats == 6  ~ 40.0,
-  nsats == 5  ~ 75.0,
-  nsats == 4  ~ 200.0
-))
+c(
+  '11' = 16.5,
+  '10' = 16.5,
+  '9'  = 19.1,
+  '8'  = 23.3,
+  '7'  = 28.4,
+  '6'  = 40.0,
+  '5'  = 75.0,
+  '4'  = 200.0
+) %>% enframe('nsats','err')
+  
 }
 
 

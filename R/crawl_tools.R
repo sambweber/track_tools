@@ -49,7 +49,8 @@ crw_check_ISW <- function(object,plot=T){
       
   if(plot){
     plot(d, xlab='Weight',main='Importance Sampling Weights', sub='(Weights centered on 1 is desirable)')
-    polygon(d,col = 'grey80')  
+    polygon(d,col = 'grey80')
+    abline(v=1,col='red')
   } else return(dmax)
       
 }

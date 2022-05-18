@@ -25,6 +25,77 @@ cbind(obj,
 
 
 # --------------------------------------------------------------------------------------------------------------
+# crw_converged
+# --------------------------------------------------------------------------------------------------------------
+
+#' A function to check whether a `crwFit` object fit by `crawl::crwMLE` has converged and has no NaN parameter
+#' estimates which prevent prediction or simulation
+#'
+#' @param crwFit A `crwFit` object produced by `crawl::crwMLE`
+#'
+#' @return A logical indicating whether the model has converged and all parameters have been estimated
+
+# -------------------------------------------------------------------------------------------------------------
+
+crw_converged <- function(crwFit){
+      
+      crwFit$convergence == 0 & !any(is.nan(crwFit$se))
+      
+      }
+
+
+# --------------------------------------------------------------------------------------------------------------
+# crw_fit
+# --------------------------------------------------------------------------------------------------------------
+
+#' A wrapper around `crawl::crwMLE` which fits multiple times until convergence is achieved
+#'
+#' @param data data.frame object containg telemetry and covariate data
+#' @param ... Other arguments passed to crwMLE
+#'
+#' @return A `crwFit` object
+
+# -------------------------------------------------------------------------------------------------------------
+
+crw_fit <- function(data,attempts,...){
+      
+      att = attempts
+      repeat{
+            fit = crawl::crwMLE(data=data,...,attempts = 5)
+            if(crw_converged(fit)) return(fit)
+            att = att - 1
+            if(att == 0) {
+                 cat("Model failed to converge after ", attempts, "attempts. Returning NULL.") 
+                 return(NULL)
+               }
+            }
+      
+ }     
+      
+# --------------------------------------------------------------------------------------------------------------
+# crw_predict
+# --------------------------------------------------------------------------------------------------------------
+
+#' A wrapper around `crawl::crwPredict` which can handle unconverged models without erroring
+#'
+#' @param crwFit A `crwFit` object produced by `crawl::crwMLE`
+#' @param ... Other arguments passed to crwPredict
+#'
+#' @return A `crwPredict` object
+
+# -------------------------------------------------------------------------------------------------------------
+
+crw_predict <- function(crwFit,...){
+  
+      if(is(crwFit,'crwFit')){
+        if(crw_converged(crwFit)){
+              crawl::crwPredict(crwFit,...)
+          } else return(NULL)
+      } else return(NULL)
+                    
+ }     
+      
+# --------------------------------------------------------------------------------------------------------------
 # crw_effSamp
 # --------------------------------------------------------------------------------------------------------------
 
@@ -110,7 +181,7 @@ as_crwData = function(data,ID,crwFit,crwPredict) {
  if(!all(map_lgl(data[[crwPredict]],is,'crwPredict'))) stop ("All crwPredict objects should be of class 'crwPredict'")
  if(!all(map_lgl(data[[crwFit]],is,'crwFit'))) stop ("All crwFit objects should be of class 'crwFit'")
  
- tcol = unique(map_chr(test$crwFit,~.x$Time.name))
+ tcol = unique(map_chr(data[[crwFit]],~.x$Time.name))
  if(length(tcol)>1) stop("Time.name is not the same for all crwFit objects")
  
  data[[crwPredict]] <- map2(data[[ID]],data[[crwPredict]],~mutate(data.frame(.y),ID = as.character(.x)))

@@ -48,3 +48,44 @@ cut_track = function(data,datetime,tmax = NULL,cut.dates = NULL,overlap=FALSE){
   }
 }
   
+
+# ------------------------------------------------------------------------------------------------------------------
+# seperate_bouts
+# ------------------------------------------------------------------------------------------------------------------
+
+#' Seperates a movement track into bouts of consisent behaviour based on a column of state labels. Optionally allows you to remove
+#' short bouts of behaviour within larger more consistent blocks using a simple linear interpolation algorithm.
+
+#' @param 
+#' 
+#' @return The original movement track with a 'bout' column added containing the numerical index of the bout
+
+# -----------------------------------------------------------------------------------------------------------------
+
+seperate_bouts = function(object, state, dt = NULL, t.min = NULL){
+  
+  if(!is.null(t.min) & is.null(dt)) stop ('Time column must be specified if t.min is provided')
+  if(!state %in% names(object)) stop(cat("Column '",state,"' does not exist"))
+  
+  object[[state]] <- as.factor(object[[state]])
+  labels = levels(object[[state]])
+  
+  st = sym(state)
+  object = mutate(object,bout = 1+cumsum(!!st!=lag(!!st,default = first(!!st)))) 
+  
+  if(!is.null(t.min)){
+    
+      object = group_by(object,bout) %>%
+      mutate(dur = difftime(max(!!sym(dt)),min(!!sym(dt)),units='hours')) %>%
+      ungroup(bout) %>% 
+      mutate(!!st := ifelse(dur < t.min, NA, as.numeric(!!st))) %>%
+      mutate(!!st := labels[round(zoo::na.fill(!!st,'extend'))]) %>%
+      dplyr::select(-dur)
+      
+      object = Recall(object,state=state)
+
+  }
+
+  return(object)
+}
+

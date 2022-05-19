@@ -50,7 +50,7 @@ cut_track = function(data,datetime,tmax = NULL,cut.dates = NULL,overlap=FALSE){
   
 
 # ------------------------------------------------------------------------------------------------------------------
-# seperate_bouts
+# split_bouts
 # ------------------------------------------------------------------------------------------------------------------
 
 #' Seperates a movement track into bouts of consisent behaviour based on a column of state labels. Optionally allows you to remove
@@ -62,7 +62,7 @@ cut_track = function(data,datetime,tmax = NULL,cut.dates = NULL,overlap=FALSE){
 
 # -----------------------------------------------------------------------------------------------------------------
 
-seperate_bouts = function(object, state, dt = NULL, t.min = NULL){
+split_bouts = function(object, state, dt = NULL, t.min = NULL){
   
   if(!is.null(t.min) & is.null(dt)) stop ('Time column must be specified if t.min is provided')
   if(!state %in% names(object)) stop(cat("Column '",state,"' does not exist"))

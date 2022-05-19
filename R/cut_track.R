@@ -56,7 +56,18 @@ cut_track = function(data,datetime,tmax = NULL,cut.dates = NULL,overlap=FALSE){
 #' Seperates a movement track into bouts of consisent behaviour based on a column of state labels. Optionally allows you to remove
 #' short bouts of behaviour within larger more consistent blocks using a simple linear interpolation algorithm.
 
-#' @param 
+#' @param object A dataframe containing a column of state labels
+
+#' @param state A character vector of length 1 giving the name of the column containing state labels
+
+#' @param dt A character vector of length 1 giving the name of the column containing datetimes (must be in `POSIXt` format). Only 
+#' required if `t.min` is specified.
+
+#' @param t.min A numeric of length 1 giving the minimum allowable duration (in hours) for a bout. Bouts that are shorter than 
+#' t.min will be assimilated into adjacent bouts by linear interpolation of the state labels implemented using the `zoo::na.fill` function.
+#' Note: this won't work well and will give unexpected results if state labels are very changeable over individual timesteps 
+#' (which might indicate the model has too many states). It is mainly intended to smooth out 'anomalies' in otherwise consitent blocks
+#' of behaviour.
 #' 
 #' @return The original movement track with a 'bout' column added containing the numerical index of the bout
 
@@ -75,7 +86,7 @@ split_bouts = function(object, state, dt = NULL, t.min = NULL){
   
   if(!is.null(t.min)){
     
-      object = group_by(object,bout) %>%
+      object = group_by(object,bout,.add=T) %>%
       mutate(dur = difftime(max(!!sym(dt)),min(!!sym(dt)),units='hours')) %>%
       ungroup(bout) %>% 
       mutate(!!st := ifelse(dur < t.min, NA, as.numeric(!!st))) %>%

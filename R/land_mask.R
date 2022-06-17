@@ -32,11 +32,13 @@ track_land_resample = function(pts,land,timestamp,max.iter){
 pts <- try(st_as_sf(pts))
 land <- try(st_as_sf(land))
 if(is(pts,'try-error') | is(land,'try-error')) stop("'pts' and 'land' should be, or be coercible to, class 'sf'")
+
 crs = st_crs(pts)
+land = st_union(land)
     
 pts %>% cbind(st_coordinates(.)) %>% 
 st_set_geometry(NULL) %>%
-split(pts,pts[[timestamp]]) %>% 
+split(.[[timestamp]]) %>% 
 map(st_as_sf,crs=crs,coords=c('X','Y')) %>%
 map(land_resample,land) %>%
 bind_rows()

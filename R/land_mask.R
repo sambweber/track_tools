@@ -1,35 +1,75 @@
-land_mask = function(object,res){
+land_mask = function(land,res){
     
     require('fasterize')
-    if(is(object,'Spatial')) object = st_as_sf(object)
-    st_union(object) %>% st_sf %>%
-    fasterize(fasterize::raster(object,res=c(res,res)),background=0)
+    land <- try(st_as_sf(land))
+    if(is(object,'try-error')) stop("'land' should be, or be coercible to, class 'sf'")
+ 
+    st_union(land) %>% st_sf %>%
+    fasterize(fasterize::raster(land,res=c(res,res)),background=0)
     
 }
 
 # --------------------------------------------------------------------------------------
 
 on_land = function(pts,land,res){
-     
-    if(!is(pts,'sf') | !is(land,'sf')) stop("'pts' and 'land' should be of class 'sf'")
+    
+    pts <- try(st_as_sf(pts))
+    if(is(pts,'try-error')) stop("'pts' should be, or be coercible to, class 'sf'")
+    
     land_mask(land,res) %>%
     terra::rast() %>%
     terra::extract(st_coordinates(pts)) %>%
     unlist(use.names=F)
     
 }
+    
+# ---------------------------------------------------------------------------------------------------------
+# 
+# ---------------------------------------------------------------------------------------------------------
+      
+track_land_resample = function(pts,land,timestamp,max.iter){
 
-# ---------------------------------------------------------------------------------------
+pts <- try(st_as_sf(pts))
+land <- try(st_as_sf(land))
+if(is(pts,'try-error') | is(land,'try-error')) stop("'pts' and 'land' should be, or be coercible to, class 'sf'")
+crs = st_crs(pts)
+    
+pts %>% cbind(st_coordinates(.)) %>% 
+st_set_geometry(NULL) %>%
+split(pts,pts[[timestamp]]) %>% 
+map(st_as_sf,crs=crs,coords=c('X','Y')) %>%
+map(land_resample,land) %>%
+bind_rows()
 
-land_resample = function(pts,land,loc.id,max.iter=1000){
+}  
     
-    pts = mutate(pts,on.land = on_land(pts,land,res=0.001))
+# ---------------------------------------------------------------------------------------------------------
+# 
+# ---------------------------------------------------------------------------------------------------------
     
-    if(any(pts$on.land)){
-        
-        
-    pts %>% cbind(st_coordinates(.)) %>%
-    group_by(!!loc.id) %>% 
-    summarize(across(c('X','Y'),c(mu=mean,sd=sd)),vcov = list(cov(cbind(X,Y))))
+land_resample = function(pts,land,max.iter=100){
+  
+  crds = st_coordinates(pts)
+  mu = colMeans(crds)
+  vcov = cov(crds)
+  
+  on_land = function(p) {st_intersects(p,land,sparse=F)[,1]}
+  on.land = on_land(pts)
+  
+  iter = 1
+  
+  while(any(on.land) & iter < max.iter){
     
-    }
+    new = MASS::mvrnorm(sum(on.land),mu=mu,Sigma=vcov) %>%
+          matrix(ncol=2) %>%
+          st_multipoint %>% st_sfc %>% st_cast('POINT')
+    st_geometry(pts[on.land,]) <- new 
+    on.land = on_land(pts)
+    iter = iter+1
+    
+  }
+  
+  pts[!on.land,]
+  
+}
+    

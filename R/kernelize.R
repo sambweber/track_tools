@@ -4,7 +4,7 @@
 
 kernelize = function(data,id,resolution,h=NULL,crs=NULL){
 
-if(is(x,'sf')) {
+if(is(data,'sf')) {
 
   crs = st_crs(data)
   data = dplyr::select(-any_of(c('X','Y'))) %>% 
@@ -13,7 +13,7 @@ if(is(x,'sf')) {
   
 }
 
-if(!all(c('X','Y') %in% names(data))) stop ("data should contain columns 'X' and 'Y' containing coordinates)
+if(!all(c('X','Y') %in% names(data))) stop ("data should contain columns 'X' and 'Y' containing coordinates")
 
 # compose grid
 lims = c(range(data$X),range(data$Y))
@@ -22,8 +22,8 @@ lims = as.numeric(matrix(extent(r)))
 n = dim(r)[2:1]
 
 fit.k = function(d) {
-   MASS::kde2d(x = d$X, y = d$Y, n=n,lims = lims) %>% 
-    raster(crs=crs)
+   k = MASS::kde2d(x = d$X, y = d$Y, n=n,lims = lims) %>% raster()
+   (k/cellStats(k,'sum'))
  }
 
 if(!missing(id)){
@@ -33,6 +33,7 @@ if(!missing(id)){
     dplyr::select(-crds)
     
 } else { fit.k(data) }
-
+ 
+  
 }
 

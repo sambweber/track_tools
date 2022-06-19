@@ -80,7 +80,7 @@ volume_contour <- function(input, res.out = 10, levels = c(95,75,25,50),output =
   output = match.arg(output)
   
   resamp = raster::disaggregate(x=input,fact = res.out,method="bilinear")
-  if(!is.null(landmask)) Z = mask(resamp,as(landmask,'Spatial'),inverse=T)
+  if(!is.null(landmask)) Z = mask(resamp,as(landmask,'Spatial'),inverse=T,updatevalue = 0)
   Z = raster::values(resamp)
   resamp[] = Z/sum(Z,na.rm=T) # normalise so that all values sum to 1
   
@@ -93,10 +93,9 @@ volume_contour <- function(input, res.out = 10, levels = c(95,75,25,50),output =
     #create contour lines
     vcs = rasterToContour(resamp,levels = breaks[1:length(levels)],maxpixels = ncell(resamp)) %>%
           st_as_sf()
-    vcs$level = levels
+    vcs$level = vclevels
     
     #convert to polygons 
-    if(!is.null(landmask)) vcs = st_difference(vcs,landmask)
     vcpolys =  st_cast(vcs,'POLYGON') %>% st_make_valid() 
     if(!is.null(landmask)) vcpolys = st_difference(vcpolys,landmask)
     

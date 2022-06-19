@@ -2,7 +2,21 @@
 # kernelize
 # ---------------------------------------------------------------------------------------
 
-kernelize <- function(data,id,resolution,h=NULL,crs=NULL,landmask=NULL){
+# data is a dataframe containing columns labelled 'X' and 'Y' containing the coordinates of the points.
+# data may also be an object of class 'sf' in which case coordinates are extracted from the geometry
+
+# id is an optional character vector naming a column of individual identifiers. A seperate kernel density will be
+# produced for each individual, but calculated on a common grid. This can assist in later merging of the kernels.
+
+# resolution is the resolution of the grid on which to compute the kernels, given in the units of the coordinate system.
+# If coordinates are in degrees, then resolution must be given in degrees.
+
+# h is the bandwidth used for kernelling. Defaults to the reference bandwidth. See ?MASS::kde2d
+
+# crs is an optional coordinate reference system which is applied to the final raster. If data is 'sf' then the crs is taken
+# directly from the input.
+
+kernelize <- function(data,id,resolution,h=NULL,crs=NULL){
     
     if(is(data,'sf')) {
         

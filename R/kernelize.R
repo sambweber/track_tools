@@ -13,11 +13,6 @@ kernelize <- function(data,id,resolution,h=NULL,crs=NULL,landmask=NULL){
         
     }
     
-    if(!is.null(landmask)){
-        land = try(as(land,'Spatial'))
-        if(is(land,'try-error')) stop('land should be coercible to class Spatial')
-    }
-    
     if(!all(c('X','Y') %in% names(data))) stop ("data should contain columns 'X' and 'Y' containing coordinates")
     
     # compose grid
@@ -28,7 +23,6 @@ kernelize <- function(data,id,resolution,h=NULL,crs=NULL,landmask=NULL){
     
     fit.k = function(d) {
         k = MASS::kde2d(x = d$X, y = d$Y, n=n,lims = lims) %>% raster()
-        if(!is.null(landmask)) k = mask(k,land,inverse=T)
         k = (k/cellStats(k,'sum'))
     }
     
@@ -46,15 +40,35 @@ kernelize <- function(data,id,resolution,h=NULL,crs=NULL,landmask=NULL){
 # volume_contour
 # -------------------------------------------------------------------------------------------------------
 
-volume_contour <- function(input, res.out = 10, levels = c(95,75,25,50),output = c('raster','polygons')){
+# input must be a Raster*
+
+# res.out is a numeric indicating how many times to increase the resolution of the input raster by for producing smoother contours and UDs. 
+# If res.out = 10 and the input resolution is 100 x 100 m, then the raster will be resampled onto a 10 x 10 m grid for contouring.
+
+# levels are the precentage volume contours to extract
+
+# output is either a classified raster or polygons
+
+# landmask is an optional spatial polygon layer of class 'sf' which is used to clip the resulting volume contours so they don't overlap the coastline. Adding
+# landmask can significantly increase computation time if the resolution is high, but it is necessary to get accurate area estimates for the volumne contours.
+# The landmask is first used to mask the input raster and remove any pixels on land. If output type is 'polygons' the landmask is also used to clip the resulting
+# polygons.
+
+volume_contour <- function(input, res.out = 10, levels = c(95,75,25,50),output = c('raster','polygons'),landmask = NULL){
   
   require(raster); require(rgdal); require(sf); require(rgeos)
   
+  if(!is.null(landmask)){
+        if(!is(landmask,'sf')) stop('landmask should be of class sf')
+        landmask = st_as_sfc(landmask) %>% st_union()  #Make sure it is just a single geom with no data
+    }  
+    
   output = match.arg(output)
   
   resamp = raster::disaggregate(x=input,fact = res.out,method="bilinear")
+  if(!is.null(landmask)) Z = mask(resamp,as(landmask,'Spatial'),inverse=T)
   Z = raster::values(resamp)
-  resamp[] = Z/sum(Z,na.rm=T) # normalise 
+  resamp[] = Z/sum(Z,na.rm=T) # normalise so that all values sum to 1
   
   vclevels = sort(levels,decreasing = T) #sort the volume contour levels
   rastvals = sort(raster::values(resamp)) #rank the raster probability values
@@ -63,14 +77,19 @@ volume_contour <- function(input, res.out = 10, levels = c(95,75,25,50),output =
   
   if(output == 'polygons'){
     #create contour lines
-    vcs = rasterToContour(resamp,levels = breaks[1:length(levels)],maxpixels = ncell(resamp))
+    vcs = rasterToContour(resamp,levels = breaks[1:length(levels)],maxpixels = ncell(resamp)) %>%
+          st_as_sf()
     vcs$level = levels
     
     #convert to polygons 
-    vcpolys = try(st_as_sf(vcs) %>% st_cast('POLYGON')) 
-    if(class(vcpolys) == "try-error") vcpolys = st_as_sf(vcs) %>% st_polygonize() 
+    if(!is.null(landmask)) vcs = st_difference(vcs,landmask)
+    vcpolys =  st_cast(vcs,'POLYGON') %>% st_make_valid() 
+    if(!is.null(landmask)) vcpolys = st_difference(vcpolys,landmask)
     
-    vcpolys = st_transform(vcpolys,54034) %>% mutate(area_km2 = round(st_area(.)/1E6,1))
+    #Calculate areas using equal area projection
+    centroid = st_coordinates(st_centroid(vcpolys))
+    lamberts = st_crs(paste0("+proj=laea +lat_0=",centroid[2],"+lon_0=",centroid[1]))
+    vcpolys$area_km2 = round(st_area(st_transform(vcpolys,lamberts))/1E6,1)
     
     return(vcpolys)
     

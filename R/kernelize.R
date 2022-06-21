@@ -114,3 +114,63 @@ volume_contour <- function(input, res.out = 10, levels = c(95,75,25,50),output =
   }
   
 }
+
+# ---------------------------------------------------------------------------------------------------------------------------
+# ref_bandwidth
+# ---------------------------------------------------------------------------------------------------------------------------
+
+ref_bandwidth = function(data,id){
+    
+     if(is(data,'sf')) {
+        
+        crs = st_crs(data)
+        data = dplyr::select(-any_of(c('X','Y'))) %>% 
+            cbind(st_coordinates(.)) %>%
+            st_set_geometry(NULL)
+        
+    }
+    
+    if(!all(c('X','Y') %in% names(data))) stop ("data should contain columns 'X' and 'Y' containing coordinates")
+    
+    bw = function(d) c(MASS::bandwidth.nrd(d$X),MASS::bandwidth.nrd(d$Y))
+    
+    if(!missing(id)){
+        split(data,data[[id]]) %>% map(bw) %>% bind_rows %>% colMeans
+    } else {bw(data)}
+        
+   }
+
+# ---------------------------------------------------------------------------------------------------------------------------
+# 
+# ---------------------------------------------------------------------------------------------------------------------------
+
+scaleARS = function(data,scales,datetime,id,plot=T){
+  
+  require(adehabitatLT)
+  
+  if(!is(data[[datetime]],'POSIXt')) stop(paste(datetime,'should be of class POSIXt'))
+  
+  if(is(data,'sf')) {
+    crds = st_transform(data,3395) %>% st_coordinates
+  } else if (is(data,'data.frame') & all(c('lon','lat') %in% names(data))) {
+    crds = st_as_sf(data,coords=c('lon','lat'),crs=4326) %>% st_transform(3395) %>% st_coordinates()   
+  } else stop("data should be in format 'sf' or a dataframe with columns 'lon' and 'lat'")
+    
+traj <- as.ltraj(data.frame(crds[,1], crds[,2]), date=data[[datetime]], id=data[[id]], typeII = TRUE)
+
+fp <- fpt(traj, radii = scales, units = "seconds")
+var_fp <- varlogfpt(fp,graph=F) #find the variance in log(fpt) for each radius
+peaks = scales[apply(var_fp,1,which.max)]
+ars = round(mean(peaks)) 
+
+if(plot){
+  setNames(var_fp,scales) %>% mutate(id = rownames(.)) %>%
+  gather(radius,varfpt,-id) %>% 
+  mutate(radius = as.numeric(radius)) %>% 
+  ggplot(aes(x = radius,y=varfpt,colour=id)) + 
+  geom_line()
+}
+
+return(ars)
+
+}

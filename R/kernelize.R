@@ -104,7 +104,7 @@ volume_contour <- function(input, res.out = 10, levels = c(95,75,25,50),output =
     if(!is.null(landmask)) vcpolys = st_difference(vcpolys,landmask)
     
     #Calculate areas using equal area projection
-    centroid = st_coordinates(st_centroid(vcpolys))
+    centroid = st_coordinates(st_centroid(st_as_sfc(st_bbox(vcpolys))))
     lamberts = st_crs(paste0("+proj=laea +lat_0=",centroid[2],"+lon_0=",centroid[1]))
     vcpolys$area_km2 = round(st_area(st_transform(vcpolys,lamberts))/1E6,1)
     

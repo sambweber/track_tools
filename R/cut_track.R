@@ -100,3 +100,44 @@ split_bouts = function(object, state, dt = NULL, t.min = NULL){
   return(object)
 }
 
+
+
+# -------------------------------------------------------------------------------------------------------------------------
+# split_trips: function for splitting movement track of a central place forager into discrete trips 
+# -------------------------------------------------------------------------------------------------------------------------
+
+#' Trips are defined based on movements outside a distance buffer placed around the central place (colony).
+
+#' @params time A POSIXt vector containing times of each track location.
+#' @params X,Y A vector of latitudes and longtidues for the track locations
+#' @params colony.X,colony.Y A vector of latitudes and longitudes or a single latitude/longitude giving the 
+#' location of the colony.
+#' @params radius The radius of the colony distance buffer in km
+#' @params min.duration The minimum duration in hours that an animal needs to be outside of the colonly buffer before
+#' it is counted as a trip
+
+split_trips = function(time, X, Y, colony.X, colony.Y, radius = 5, min.duration = 6){
+  
+    dist = traipse::track_distance_to(X,Y,colony.X,colony.Y)/1000   
+    trip = dist >= radius
+    trip = cumsum(trip != lag(trip,default=TRUE))
+    trip = ifelse(dist < r,NA,trip)
+    
+    tibble(trip=trip,dist=dist,time=time) %>%
+    group_by(trip) %>% 
+    mutate(duration = difftime(max(time),min(time),unit='hours')) %>%
+    mutate(trip = ifelse(duration > min.duration,trip,NA)) %>%
+    mutate(trip = as.numeric(factor(trip))) %>%
+    mutate(returns = last(dist) <= radius) %>%
+    mutate(returns = ifelse(is.na(trip),NA,returns)) %>%
+    dplyr::select(trip,returns)
+  
+}
+
+#' @examples This function is designed to be called within a tidy workflow and works with grouping etc. to split trips for multiple animals at the same
+#' time. 
+#' group_by(data,id) %>% 
+#' mutate(split_trips(time = time, X = X, Y = Y, colony.X = 14.212, colony.Y = 9.232, radius = 2, min.duration = 12))
+
+#' @returns A two-column data frame containg the trip ids ('trip') and a logical vector (returns) indicating whether the trip returned to within the colony buffer
+

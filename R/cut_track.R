@@ -116,7 +116,7 @@ split_bouts = function(object, state, dt = NULL, t.min = NULL){
 #' @params min.duration The minimum duration in hours that an animal needs to be outside of the colonly buffer before
 #' it is counted as a trip
 
-split_trips = function(X, Y, colony.X, colony.Y, time=NULL, radius = 5, colony.radius=NULL, min.duration = 0){
+split_trips = function(X, Y, colony.X, colony.Y, time=NULL, radius=5, colony.radius=NULL, min.duration=0, remove.pre.deploy=F){
   
     if(is.null(time)) time = Sys.time()
     r = ifelse(is.null(colony.radius), radius, colony.radius)
@@ -140,6 +140,7 @@ split_trips = function(X, Y, colony.X, colony.Y, time=NULL, radius = 5, colony.r
      ungroup() %>%
      mutate(returns = !(trip == max(trip,na.rm=T) & !last(dist)<=radius)) %>%
      mutate(trip = ifelse(duration >= min.duration,trip,NA)) %>%
+     {if(remove.pre.deploy) mutate(.,trip = ifelse(!cumsum(at.colony)>0,NA,trip)) else .} %>%
      mutate(returns = ifelse(is.na(trip),NA,returns)) %>%
      mutate(trip = as.numeric(factor(trip))) %>%
      dplyr::select(trip,returns)

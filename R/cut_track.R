@@ -116,21 +116,33 @@ split_bouts = function(object, state, dt = NULL, t.min = NULL){
 #' @params min.duration The minimum duration in hours that an animal needs to be outside of the colonly buffer before
 #' it is counted as a trip
 
-split_trips = function(time, X, Y, colony.X, colony.Y, radius = 5, min.duration = 6){
+split_trips = function(X, Y, colony.X, colony.Y, time=NULL, radius = 5, colony.radius=NULL, min.duration = 0){
+  
+    if(is.null(time)) time = Sys.time()
+    r = ifelse(is.null(colony.radius), radius, colony.radius)
   
     dist = traipse::track_distance_to(X,Y,colony.X,colony.Y)/1000   
-    trip = dist >= radius
-    trip = cumsum(trip != lag(trip,default=TRUE))
-    trip = ifelse(dist < r,NA,trip)
+    at.colony = dist < r
+    trip = cumsum(at.colony != lag(at.colony,default=TRUE))
     
-    tibble(trip=trip,dist=dist,time=time) %>%
+    tibble(dist,time,trip,at.colony) %>%
     group_by(trip) %>% 
-    mutate(duration = difftime(max(time),min(time),unit='hours')) %>%
-    mutate(trip = ifelse(duration > min.duration,trip,NA)) %>%
-    mutate(trip = as.numeric(factor(trip))) %>%
-    mutate(returns = last(dist) <= radius) %>%
-    mutate(returns = ifelse(is.na(trip),NA,returns)) %>%
-    dplyr::select(trip,returns)
+    {if(!is.null(colony.radius)){
+        mutate(.,trip = case_when(
+             at.colony & row_number() == n()~ trip+1L,
+             at.colony & row_number() == 1L ~ trip-1L,
+             TRUE ~ trip))
+      } else .} %>%
+     mutate(duration = suppressWarnings(
+                        difftime(max(time[dist>radius]),
+                                 min(time[dist>radius]),
+                                 unit='hours')))   %>%
+     ungroup() %>%
+     mutate(returns = !(trip == max(trip,na.rm=T) & !last(dist)<=radius)) %>%
+     mutate(trip = ifelse(duration >= min.duration,trip,NA)) %>%
+     mutate(returns = ifelse(is.na(trip),NA,returns)) %>%
+     mutate(trip = as.numeric(factor(trip))) %>%
+     dplyr::select(trip,returns)
   
 }
 

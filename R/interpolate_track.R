@@ -44,7 +44,7 @@ interpolate_track <- function(spdf,datefield,id,t,fun=c('linear','pchip','spline
   require(sf)
   require(dplyr)
   
-  if(!(is(spdf,'sf') | is(spdf,'SpatialPoints')) stop ("spdf must be an object of class 'sf' or 'SpatialPoints'")
+  if(!(is(spdf,'sf') | is(spdf,'SpatialPoints'))) stop ("spdf must be an object of class 'sf' or 'SpatialPoints'")
   sf = is(spdf,'sf'); if(sf) spdf = as(spdf,'Spatial')
   fun = match.arg(fun)
   geom = match.arg(geom)

@@ -25,7 +25,7 @@ kernelize <- function(data,id,resolution,h=NULL,crs=NULL){
     if(is(data,'sf')) {
         
         crs = st_crs(data)
-        data = dplyr::select(-any_of(c('X','Y'))) %>% 
+        data = dplyr::select(data,-any_of(c('X','Y'))) %>% 
             cbind(st_coordinates(.)) %>%
             st_set_geometry(NULL)
         

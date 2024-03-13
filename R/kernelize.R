@@ -47,7 +47,7 @@ kernelize <- function(data,id,resolution,h=NULL,crs=NULL){
     if(!missing(id)){
         
         nest(data,crds = -!!id) %>%
-            mutate(kernel = map(crds,fit.k)) %>%
+            mutate(kernel = purrr::map(crds,fit.k)) %>%
             dplyr::select(-crds)
         
     } else { fit.k(data) }

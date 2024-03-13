@@ -6,6 +6,9 @@ library(sf)
 # kernelize
 # ---------------------------------------------------------------------------------------
 
+# This function and the volume_contours function should be updated to return and take a raster stack with 
+# layers named by individual for ease. 
+
 # data is a dataframe containing columns labelled 'X' and 'Y' containing the coordinates of the points.
 # data may also be an object of class 'sf' in which case coordinates are extracted from the geometry
 
@@ -85,7 +88,7 @@ kernelize <- function(data,id,resolution,h=NULL,crs=NULL,extend=1,fixed.grid = F
 # The landmask is first used to mask the input raster and remove any pixels on land. If output type is 'polygons' the landmask is also used to clip the resulting
 # polygons.
 
-volume_contour <- function(input, res.out = 10, levels = c(95,75,25,50),output = c('raster','polygons'),landmask = NULL){
+volume_contour <- function(input, res.out = 10, levels = c(95,50),output = c('raster','polygons'),landmask = NULL){
   
   require(raster); require(rgdal); require(sf); require(rgeos)
   

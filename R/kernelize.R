@@ -41,8 +41,7 @@ kernelize <- function(data,id,resolution,h=NULL,crs=NULL){
     
     fit.k = function(d) {
         k = MASS::kde2d(x = d$X, y = d$Y, n=n,lims = lims) %>% raster()
-        k = (k/cellStats(k,'sum'))
-        k
+        (k/cellStats(k,'sum'))
     }
     
     if(!missing(id)){

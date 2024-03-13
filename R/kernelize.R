@@ -139,7 +139,7 @@ ref_bandwidth = function(data,id){
     bw = function(d) c(MASS::bandwidth.nrd(d$X),MASS::bandwidth.nrd(d$Y))
     
     if(!missing(id)){
-        split(data,data[[id]]) %>% map(bw) %>% bind_rows %>% colMeans
+        split(data,data[[id]]) %>% purrr::map(bw) %>% bind_rows %>% colMeans
     } else {bw(data)}
         
    }

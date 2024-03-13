@@ -20,7 +20,11 @@ library(sf)
 # crs is an optional coordinate reference system which is applied to the final raster. If data is 'sf' then the crs is taken
 # directly from the input.
 
-kernelize <- function(data,id,resolution,h=NULL,crs=NULL){
+# fixed.grid is a logical indicating whether all US should be estimated on the same grid. This is useful for merging UDs
+# later (i.e. where multiple individuals overlap), but takes much longer when individuals are spread over a large and disparate
+# area. It should only be set to TRUE when you may want to calculate population level UDs or overlaps later.
+
+kernelize <- function(data,id,resolution,h=NULL,crs=NULL,extend=1,fixed.grid = FALSE){
     
     if(is(data,'sf')) {
         
@@ -34,23 +38,32 @@ kernelize <- function(data,id,resolution,h=NULL,crs=NULL){
     if(!all(c('X','Y') %in% names(data))) stop ("data should contain columns 'X' and 'Y' containing coordinates")
     
     # compose grid
-    lims = c(range(data$X),range(data$Y))
-    r = extent(lims) %>% raster(resolution = resolution) %>% extend(1)
-    lims = as.numeric(matrix(extent(r)))
-    n = dim(r)[2:1]
-    
-    fit.k = function(d) {
-        k = MASS::kde2d(x = d$X, y = d$Y, n=n,lims = lims) %>% raster()
+    mk.grd = function(data){
+          lims = c(range(data$X),range(data$Y))
+          r = terra::ext(lims) %>% terra::rast(resolution = resolution) 
+          r = terra::extend(r,c(round((nrow(r)*extend-nrow(r))/2), round((ncol(r)*extend-ncol(r))/2)))
+          lims = as.numeric(matrix(terra::ext(r)))
+          n = dim(r)[2:1]
+          list(lims=lims,n=n)
+    }
+
+    fit.k = function(d,grd) {
+        k = MASS::kde2d(x = d$X, y = d$Y, n=grd$n,lims = grd$lims) %>% raster::raster()
         (k/cellStats(k,'sum'))
     }
     
     if(!missing(id)){
         
         nest(data,crds = -!!id) %>%
-            mutate(kernel = purrr::map(crds,fit.k)) %>%
-            dplyr::select(-crds)
+          {if(fixed.grid) {
+            mutate(.,kernel = purrr::map(crds,~fit.k(.x, grd = mk.grd(data))))
+              } else {
+            mutate(.,kernel = purrr::map(crds,~fit.k(.x, grd = mk.grd(.x))))
+              }
+           } %>%
+        dplyr::select(-crds)
         
-    } else { fit.k(data) }
+    } else {fit.k(data, grd = mk.grd(data)) }
     
 }
 
@@ -148,7 +161,7 @@ ref_bandwidth = function(data,id){
 # 
 # ---------------------------------------------------------------------------------------------------------------------------
 
-scaleARS = function(data,scales,datetime,id,plot=T){
+scaleARS = function(data,scales = 1:24*3600,datetime,id,plot=T){
   
   require(adehabitatLT)
   
@@ -168,11 +181,13 @@ peaks = scales[apply(var_fp,1,which.max)]
 ars = round(mean(peaks)) 
 
 if(plot){
+  pl =
   setNames(var_fp,scales) %>% mutate(id = rownames(.)) %>%
   gather(radius,varfpt,-id) %>% 
   mutate(radius = as.numeric(radius)) %>% 
   ggplot(aes(x = radius,y=varfpt,colour=id)) + 
   geom_line()
+  print(pl)
 }
 
 return(ars)

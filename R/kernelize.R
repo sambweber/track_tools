@@ -27,7 +27,7 @@ library(sf)
 # later (i.e. where multiple individuals overlap), but takes much longer when individuals are spread over a large and disparate
 # area. It should only be set to TRUE when you may want to calculate population level UDs or overlaps later.
 
-kernelize <- function(data,id,resolution,h=NULL,crs=NULL,extend=1,fixed.grid = FALSE){
+kernelize <- function(data,id,resolution,bw=NULL,crs=NULL,extend=1,fixed.grid = FALSE){
     
     if(is(data,'sf')) {
         
@@ -51,7 +51,7 @@ kernelize <- function(data,id,resolution,h=NULL,crs=NULL,extend=1,fixed.grid = F
     }
 
     fit.k = function(d,grd) {
-        k = MASS::kde2d(x = d$X, y = d$Y, n=grd$n,lims = grd$lims) %>% raster::raster()
+        k = MASS::kde2d(x = d$X, y = d$Y, n=grd$n,lims = grd$lims, h=bw) %>% raster::raster()
         (k/cellStats(k,'sum'))
     }
     

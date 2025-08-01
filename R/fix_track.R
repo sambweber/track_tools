@@ -45,46 +45,55 @@ fix_track = function (x, dt = 'datetime', eps = 1){
     arrange(!!dt,.by_group=T)              # order by datetime
   
 }
-  
-  
+
+
 # ----------------------------------------------------------------------------------------------------
 # best_location
 # ----------------------------------------------------------------------------------------------------
 
-#' Filters tracking dataset to retain only the best location within a burst of locations that are closely spaced in time.
-#' Having lots of locations that are very closely spaced in time (< 2 seconds) can lead to problems with model fitting that
-#' can't be solved by simply adding a fixed amount to duplicated timestamps. In the event of a tie, the first observation
-#' in each burst is retained.
+#' Filters tracking dataset to retain only the best location within a series of locations that are separated by a minimum time interval.
+#' This approach can be used to thin a dataset to reduce temporal pseudoreplication (e.g. best hourly location) or as a preparatory step 
+#' for State Space Models.
+#' Having lots of locations that are very closely spaced in time (< 2 seconds) can lead to problems with SSM model fitting that
+#' can't be solved by simply adding a fixed amount to duplicated timestamps. 
+
+#' The function retains the best location within a rolling window of duration tmin, based on quality columns specified in
+#' filter_cols. The location with the MAXIMUM value in filter_cols is retained in each hourly window. In the event of a tie, 
+#' the first is retained. Multiple filter columns can be specified by wrapping in c() in which case they are applied in order. 
+#' The location(s) with the maximum value in the first filter_col is selected first, and subsequent filter_cols are used to break ties.
+#' This will work on numeric and factorial filter columns, but factors should be ordered with the best/highest value as the final level. 
 
 #' @param data
 #' @param dt The name of the column containing the timestamp (must be of class \code{POSIX*}) 
 
-#' @return 
+best_location = function(df,timestamp,tmin='1 hour',filter_cols){
 
-# -------------------------------------------------------------------------------------------------------
+df <- arrange(df,!!sym(timestamp))
+selected <- df[0,]
 
-best_location = function(data,dt,tmin=1,filter_cols){
-     
-    if(!all(filter_cols %in% names(data))) stop ('filter_cols do not all appear in data')
-    if(!all(map_lgl(filter_cols,~is.numeric(data[[.x]])|is.factor(data[[.x]])))) {
-      stop('filter_cols must be of class numeric or class factor')
-    }
+start_time <- min(df[[timestamp]])
+end_time <- max(df[[timestamp]])
+
+while (start_time < end_time) {
+  
+  window_end <- start_time + duration(tmin)
+  window_data <- filter(df,!!sym(timestamp) >= start_time, !!sym(timestamp) < window_end)
+  
+  if (nrow(window_data) > 0) {
+  
+    best_point <- slice_max(window_data,tibble(!!!syms(filter_cols)),with_ties = FALSE)
+    selected <- bind_rows(selected, best_point)
+    start_time <- best_point[[timestamp]] + duration(tmin)
     
-    filter_cols <- ifelse(map_lgl(filter_cols,~is.factor(data[[.x]])),paste0(filter_cols,'..num'),filter_cols)
-  
-    min_na = function(x) {if(all(is.na(x))) is.na(x) else x == min(x,na.rm=T)}
-  
-    mutate(data,across(where(is.factor),as.numeric,.names="{.col}..num")) %>%
-    mutate(ok = traipse::track_time(!!as.name(dt)) >= tmin) %>%
-    mutate(ok = replace_na(ok,TRUE))   %>%
-    mutate(ok = cumsum(ok))  %>%
-    group_by(ok,.add=T) %>% 
-    dplyr::filter(across(all_of(filter_cols),min_na)) %>%
-    slice(1) %>% ungroup(ok) %>%
-    dplyr::select(-ok,-ends_with('..num'))
-  
+  } else {
+    start_time <- window_end
+  }
 }
- 
+
+return(selected)
+
+}
+  
 # ----------------------------------------------------------------------------------------------------
 # spread_times
 # ----------------------------------------------------------------------------------------------------

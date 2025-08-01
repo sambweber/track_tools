@@ -93,7 +93,22 @@ while (start_time < end_time) {
 return(selected)
 
 }
+
+# A quicker implementation that can be run over a grouped_df is provided below, but this does not enforce a true
+# rolling window and may therefore overthin the data if there are large number of locations seperated by < tmin.
+# The last location within a burst may be >tmin from the first, but will still be counted as part of the same
+# burst if there are multiple locations in between. It is fine in many implementations but use with care.  
+
+best_location_quick = function(df,timestamp,tmin='1 hour',filter_cols){
+
+  mutate(df,bin = c(0,cumsum(diff(!!sym(timestamp)) > duration(tmin)))) %>%
+     group_by(bin,.add=T) %>%
+     slice_max(tibble(!!!syms(filter_cols)),with_ties = FALSE) %>%
+     dplyr::select(-bin)
   
+}
+         
+
 # ----------------------------------------------------------------------------------------------------
 # spread_times
 # ----------------------------------------------------------------------------------------------------

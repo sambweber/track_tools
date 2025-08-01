@@ -55,7 +55,7 @@ kernelize <- function(data,id,resolution,h=NULL,crs=NULL,extend=1,fixed.grid = F
     }
 
     fit.k = function(d,grd,h) {
-        k = MASS::kde2d(x = d$X, y = d$Y, n=grd$n,lims = grd$lims, h=h) %>% terra::rast()
+        k = MASS::kde2d(x = d$X, y = d$Y, n=grd$n,lims = grd$lims, h=h) %>% terra::rast(crs = crs$wkt)
         (k/terra::global(k,'sum')[1,])
     }
     
@@ -70,7 +70,7 @@ kernelize <- function(data,id,resolution,h=NULL,crs=NULL,extend=1,fixed.grid = F
            } %>%
         dplyr::select(-crds)
         
-    } else {fit.k(data, grd = mk.grd(data)) }
+    } else {fit.k(data, grd = mk.grd(data), h=h) }
     
 }
 
@@ -103,7 +103,7 @@ volume_contour <- function(input, res.out = 10, levels = c(95,50),output = c('ra
     
   output = match.arg(output)
   
-  resamp = raster::disaggregate(x=input,fact = res.out,method="bilinear")
+  resamp = terra::disagg(x=input,fact = res.out,method="bilinear")
   if(!is.null(landmask)) Z = mask(resamp,as(landmask,'Spatial'),inverse=T,updatevalue = 0)
   Z = raster::values(resamp)
   resamp[] = Z/sum(Z,na.rm=T) # normalise so that all values sum to 1

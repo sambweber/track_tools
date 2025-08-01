@@ -27,7 +27,7 @@ library(sf)
 # later (i.e. where multiple individuals overlap), but takes much longer when individuals are spread over a large and disparate
 # area. It should only be set to TRUE when you may want to calculate population level UDs or overlaps later.
 
-kernelize <- function(data,id,resolution,bw=NULL,crs=NULL,extend=1,fixed.grid = FALSE){
+kernelize <- function(data,id,resolution,h=NULL,crs=NULL,extend=1,fixed.grid = FALSE,fixed.bw = FALSE){
     
     if(is(data,'sf')) {
         
@@ -39,29 +39,33 @@ kernelize <- function(data,id,resolution,bw=NULL,crs=NULL,extend=1,fixed.grid = 
     }
     
     if(!all(c('X','Y') %in% names(data))) stop ("data should contain columns 'X' and 'Y' containing coordinates")
+
+    if(fixed.bw & is.null(h)) h = ref_bandwidth(data)
     
     # compose grid
     mk.grd = function(data){
           lims = c(range(data$X),range(data$Y))
+          if(is.null(h)) h = ref_bandwidth(data)
           r = terra::ext(lims) %>% terra::rast(resolution = resolution) 
-          r = terra::extend(r,c(round((nrow(r)*extend-nrow(r))/2), round((ncol(r)*extend-ncol(r))/2)))
+          #r = terra::extend(r,c(round((nrow(r)*extend-nrow(r))/2), round((ncol(r)*extend-ncol(r))/2)))
+          r = terra::extend(r, rev(ceiling(h/resolution))) # extending based on reference bandwidth
           lims = as.numeric(matrix(terra::ext(r)))
           n = dim(r)[2:1]
           list(lims=lims,n=n)
     }
 
-    fit.k = function(d,grd) {
-        k = MASS::kde2d(x = d$X, y = d$Y, n=grd$n,lims = grd$lims, h=bw) %>% raster::raster()
-        (k/cellStats(k,'sum'))
+    fit.k = function(d,grd,h) {
+        k = MASS::kde2d(x = d$X, y = d$Y, n=grd$n,lims = grd$lims, h=h) %>% terra::rast()
+        (k/terra::global(k,'sum')[1,])
     }
     
     if(!missing(id)){
         
         nest(data,crds = -!!id) %>%
           {if(fixed.grid) {
-            mutate(.,kernel = purrr::map(crds,~fit.k(.x, grd = mk.grd(data))))
+            mutate(.,kde = purrr::map(crds,~fit.k(.x, grd = mk.grd(data), h=h)))
               } else {
-            mutate(.,kernel = purrr::map(crds,~fit.k(.x, grd = mk.grd(.x))))
+            mutate(.,kde = purrr::map(crds,~fit.k(.x, grd = mk.grd(.x), h=h)))
               }
            } %>%
         dplyr::select(-crds)
@@ -144,7 +148,7 @@ ref_bandwidth = function(data,id){
      if(is(data,'sf')) {
         
         crs = st_crs(data)
-        data = dplyr::select(-any_of(c('X','Y'))) %>% 
+        data = dplyr::select(data,-any_of(c('X','Y'))) %>% 
             cbind(st_coordinates(.)) %>%
             st_set_geometry(NULL)
         

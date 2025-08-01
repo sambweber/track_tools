@@ -22,9 +22,49 @@ on_land = function(pts,land,res){
     unlist(use.names=F)
     
 }
+
+# ---------------------------------------------------------------------------------------------------------
+# land_relocate
+# ---------------------------------------------------------------------------------------------------------
+
+# Function to move locations that lie on land to the nearest position in water. A distance threshold (in projection units) can 
+# be specified using max.dist to only move locations that lie within a certain distance. All other locations are filtered out.
+
+land_relocate = function(pts,land,max.dist){
+
+pts <- try(st_as_sf(pts))
+land <- try(st_as_sf(land))
+if(is(pts,'try-error') | is(land,'try-error')) stop("'pts' and 'land' should be, or be coercible to, class 'sf'")  
+if(!st_geometry_type(land) %in% c('MULTIPOLYGON','POLYGON')) stop("'land' should be a polygon geometry type")
+if(st_is_longlat(land) & !missing(max.dist)) stop ("'land' should be in a projected coordinate system") 
+
+land = st_union(land)
+pts = st_transform(pts, st_crs(land))
+onland = st_intersects(pts,land,sparse=F)[,1]
+coast = st_cast(land,'MULTILINESTRING')
+
+relocate = onland
+
+if(!missing(max.dist)){
+relocate[onland] <- st_is_within_distance(pts[onland,],coast,max.dist,sparse=F)[,1]
+}
+
+suppressWarnings(
+st_geometry(pts[relocate,]) <- st_nearest_points(coast, pts[relocate,]) %>% 
+                                lapply(st_cast,'POINT') %>% 
+                                st_sfc
+)
+
+pts$relocated = relocate
+
+return(pts[!(onland & !relocate),])
+
+}
+
+
     
 # ---------------------------------------------------------------------------------------------------------
-# 
+# track_land_resample
 # ---------------------------------------------------------------------------------------------------------
       
 track_land_resample = function(pts,land,timestamp,max.iter){
@@ -46,7 +86,7 @@ bind_rows()
 }  
     
 # ---------------------------------------------------------------------------------------------------------
-# 
+# land_resample
 # ---------------------------------------------------------------------------------------------------------
     
 land_resample = function(pts,land,max.iter=100){

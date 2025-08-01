@@ -35,10 +35,12 @@ land_relocate = function(pts,land,max.dist){
 pts <- try(st_as_sf(pts))
 land <- try(st_as_sf(land))
 if(is(pts,'try-error') | is(land,'try-error')) stop("'pts' and 'land' should be, or be coercible to, class 'sf'")  
-if(!st_geometry_type(land) %in% c('MULTIPOLYGON','POLYGON')) stop("'land' should be a polygon geometry type")
-if(st_is_longlat(land) & !missing(max.dist)) stop ("'land' should be in a projected coordinate system") 
 
 land = st_union(land)
+if(!st_geometry_type(land) %in% c('MULTIPOLYGON','POLYGON')) stop("'land' should be a polygon geometry type")
+
+if(st_is_longlat(land) & !missing(max.dist)) stop ("'land' should be in a projected coordinate system") 
+
 pts = st_transform(pts, st_crs(land))
 onland = st_intersects(pts,land,sparse=F)[,1]
 coast = st_cast(land,'MULTILINESTRING')

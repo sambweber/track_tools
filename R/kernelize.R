@@ -55,8 +55,10 @@ kernelize <- function(data,id,resolution,h=NULL,crs=NULL,extend=1,fixed.grid = F
     }
 
     fit.k = function(d,grd,h) {
-        k = MASS::kde2d(x = d$X, y = d$Y, n=grd$n,lims = grd$lims, h=h) %>% terra::rast(crs = crs$wkt)
-        (k/terra::global(k,'sum')[1,])
+        k = MASS::kde2d(x = d$X, y = d$Y, n=grd$n,lims = grd$lims, h=h) %>% terra::rast()
+        k = (k/terra::global(k,'sum')[1,])
+        crs(k) <- crs$wkt
+        return(k)
     }
     
     if(!missing(id)){
@@ -92,30 +94,27 @@ kernelize <- function(data,id,resolution,h=NULL,crs=NULL,extend=1,fixed.grid = F
 # The landmask is first used to mask the input raster and remove any pixels on land. If output type is 'polygons' the landmask is also used to clip the resulting
 # polygons.
 
-volume_contour <- function(input, res.out = 10, levels = c(95,50),output = c('raster','polygons'),landmask = NULL){
-  
-  require(raster); require(rgdal); require(sf); require(rgeos)
-  
+volume_contour <- function(input, res.out = 1, levels = c(95,50),output = c('raster','polygons'),landmask = NULL){
+    
   if(!is.null(landmask)){
         if(!is(landmask,'sf')) stop('landmask should be of class sf')
         landmask = st_as_sfc(landmask) %>% st_union()  #Make sure it is just a single geom with no data
     }  
     
   output = match.arg(output)
-  
-  resamp = terra::disagg(x=input,fact = res.out,method="bilinear")
-  if(!is.null(landmask)) Z = mask(resamp,as(landmask,'Spatial'),inverse=T,updatevalue = 0)
-  Z = raster::values(resamp)
-  resamp[] = Z/sum(Z,na.rm=T) # normalise so that all values sum to 1
+
+  if(res.out!=1) input = terra::disagg(x=input,fact = res.out,method="bilinear")
+  if(!is.null(landmask)) input = mask(input,vect(landmask),inverse=T,updatevalue = 0)
+  input= (input/terra::global(input,'sum')[1,])
   
   vclevels = sort(levels,decreasing = T) #sort the volume contour levels
-  rastvals = sort(raster::values(resamp)) #rank the raster probability values
+  rastvals = sort(terra::values(input)[,1]) #rank the raster probability values
   breaks   = sapply(1-vclevels/100,FUN=function(x){rastvals[max(which(cumsum(rastvals)<=x))]})
   breaks   = c(breaks,1)
   
   if(output == 'polygons'){
     #create contour lines
-    vcs = rasterToContour(resamp,levels = breaks[1:length(levels)],maxpixels = ncell(resamp)) %>%
+    vcs = as.contour(input,levels = breaks[1:length(levels)],maxpixels = ncell(input)) %>%
           st_as_sf()
     vcs$level = vclevels
     
@@ -132,8 +131,8 @@ volume_contour <- function(input, res.out = 10, levels = c(95,50),output = c('ra
     
   } else {
     
-    resamp = reclassify(resamp,matrix(c(min(rastvals),breaks[-length(breaks)],breaks,NA,vclevels),ncol=3),include.lowest=T)
-    return(resamp)
+    input = terra::classify(input,matrix(c(min(rastvals),breaks[-length(breaks)],breaks,NA,vclevels),ncol=3),include.lowest=T)
+    return(input)
     
   }
   

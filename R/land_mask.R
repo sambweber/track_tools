@@ -54,7 +54,7 @@ relocate[onland] <- st_is_within_distance(pts[onland,],coast,max.dist,sparse=F)[
 suppressWarnings(
 st_geometry(pts[relocate,]) <- st_nearest_points(coast, pts[relocate,]) %>% 
                                 lapply(st_cast,'POINT') %>% 
-                                st_sfc
+                                st_sfc(crs = st_crs(pts))
 )
 
 pts$relocated = relocate
